@@ -1,0 +1,9 @@
+CTCTCACA	49_Trento_B_hirsuta
+GATTGTCA	50_Dazendorf
+GGACCTCA	51_Seegalendorf
+GTTCGGCA	70_Vindeholme
+ATCATGGT	114_Hoeoer
+TCACTACT	115_Jaervafaeltet
+GCGAGTAG	116_Estland_TU_273776
+GGTTCGAG	117_Estland_TU_373737
+

@@ -1,0 +1,12 @@
+CAACACAA	11_Trentino
+TCTACGGA	27_Kastberga_skog
+ACACTCGA	28_Kastberga_aeng
+GTGTGCGA	29_Bielefeld
+ACACAACA	30_Goerlitz
+TGTCTAGT	103_Nantes
+GTACATGT	104_Rostock
+TCAGTTGT	107_Rumaenien_18070a
+TACGAGGT	108_Rumaenien_18070a
+CCACCTTG	124_Rumaenien_18065b
+GTAGTGTG	125_Rumaenien_18065b
+
