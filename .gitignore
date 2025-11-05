@@ -1,6 +1,10 @@
 # Ignore raw data folder files
 02-raw_data/*
 !02-raw_data/.gitkeep
+!02-raw_data/P2A/
+!02-raw_data/P2B/
+!02-raw_data/P2C/
+!02-raw_data/P2D/
 
 # Ignore log files
 05-logs/*
