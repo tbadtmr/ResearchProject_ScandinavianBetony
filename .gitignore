@@ -1,0 +1,7 @@
+# Ignore raw data folder files
+02-raw_data/*
+!02-raw_data/.gitkeep
+
+# Ignore log files
+05-logs/*
+!05-logs/.gitkeep
