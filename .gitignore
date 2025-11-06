@@ -6,6 +6,10 @@
 !02-raw_data/P2C/
 !02-raw_data/P2D/
 
+# Intermediate files
+03-analysis/*
+!03-analysis/.gitkeep
+
 # Ignore log files
 05-logs/*
 !05-logs/.gitkeep
