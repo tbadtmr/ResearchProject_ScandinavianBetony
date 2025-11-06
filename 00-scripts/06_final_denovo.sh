@@ -18,8 +18,8 @@
 #   - Popmap (full set):    01-info_files/popmap.txt
 #
 # Outputs:
-#   - denovo_map results:   03-results/06-finalrun/denovo_m<M>_M<M>_n<n>/
-#   - populations runs:     03-results/06-finalrun/<run_name>/
+#   - denovo_map results:   03-analysis/06-finalrun/denovo_m<M>_M<M>_n<n>/
+#   - populations runs:     03-analysis/06-finalrun/<run_name>/
 #   - Logs:                 05-logs/06_final_denovo_*.log
 # ==============================================================
 
@@ -39,7 +39,7 @@ n_value="$3"
 READ_DIR="03-analysis/03-clonefiltered"
 POPMAP="01-info_files/popmap.txt"
 
-RESULTS_ROOT="03-results/06-finalrun"
+RESULTS_ROOT="03-analysis/06-finalrun"
 LOG_DIR="05-logs"
 
 CORES=8
