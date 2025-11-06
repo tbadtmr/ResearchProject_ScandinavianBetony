@@ -80,6 +80,7 @@ for n in "${N_VALUES[@]}"; do
       -M "$POPMAP" \
       -t "$CORES" \
       -r 0.8 \
+      --vcf \
       &>> "$LOG"
   fi
 

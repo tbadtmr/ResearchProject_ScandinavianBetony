@@ -68,6 +68,7 @@ for m in "${M_VALUES[@]}"; do
       -M "$POPMAP" \
       -t "$CORES" \
       -r 0.8 \
+      --vcf \
       &>> "$LOG"
   fi
 
