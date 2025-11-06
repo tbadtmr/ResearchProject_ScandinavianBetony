@@ -5,22 +5,20 @@
 # Year:   2025
 #
 # Description:
-#   Isolation-by-distance analysis: read PLINK 1–IBS distances and
-#   sample coordinates, compute geographic distances, run Mantel tests
-#   (9999 perms), and plot relationships (global, excl. Western_Europe,
-#   and within-group facets). Saves plots and result tables to 04-results/.
+#   Analyze isolation by distance (IBD) using PLINK 1–IBS distances
+#   and sample coordinates. Performs Mantel tests (9,999 perms)
+#   and generates regression plots.
 #
 # Inputs:
-#   - 03-analysis/08-downstream/04-diversity/ibs/ibs_<RUN>.mdist
-#   - 03-analysis/08-downstream/04-diversity/ibs/ibs_<RUN>.mdist.id
-#   - 01-info_files/samples_clean.txt  (must contain: IID, Latitude, Longitude, Group[, Country])
+#   - 03-analysis/08-downstream/05-ibd/ibs_<RUN>.mdist(.id)
+#   - 01-info_files/samples_clean.txt
 #
 # Outputs:
+#   - 04-results/ibd_mantel_summary.tsv
+#   - 04-results/ibd_within_group_mantel.tsv
 #   - 04-results/ibd_all_pairs.svg
 #   - 04-results/ibd_excluding_western.svg
 #   - 04-results/ibd_within_groups_facets.svg
-#   - 04-results/ibd_mantel_summary.tsv
-#   - 04-results/ibd_within_group_mantel.tsv
 #
 # Usage:
 #   Rscript 00-scripts/13_ibd_analysis.R r70_noTrentino_noOutgroup
@@ -28,155 +26,105 @@
 
 suppressPackageStartupMessages({
   library(tidyverse)
-  library(geosphere)  
-  library(vegan)     
+  library(geosphere)
+  library(vegan)
   library(svglite)
 })
 
 args <- commandArgs(trailingOnly = TRUE)
 if (length(args) < 1) {
-  stop("Usage: Rscript 00-scripts/18_ibd_analysis.R <RUN>\n",
-       "Example: Rscript 00-scripts/18_ibd_analysis.R r70_noTrentino_noOutgroup", call. = FALSE)
+  stop("Usage: Rscript 00-scripts/18_ibd_analysis.R <RUN>")
 }
 RUN <- args[[1]]
 
 # Paths
-base_ibd <- file.path("03-analysis","08-downstream","04-diversity","ibs")
-mdist_fp <- file.path(base_ibd, paste0("ibs_", RUN, ".mdist"))
-ids_fp   <- file.path(base_ibd, paste0("ibs_", RUN, ".mdist.id"))
+ibs_dir  <- file.path("03-analysis","08-downstream","05-ibd")
+mdist_fp <- file.path(ibs_dir, paste0("ibs_", RUN, ".mdist"))
+ids_fp   <- file.path(ibs_dir, paste0("ibs_", RUN, ".mdist.id"))
 meta_fp  <- file.path("01-info_files","samples_clean.txt")
 
-rout_dir <- "04-results"
-dir.create(rout_dir, showWarnings = FALSE)
+out_dir  <- "04-results"
+dir.create(out_dir, showWarnings = FALSE)
 
-# Read genetic distance (1–IBS)
-if (!file.exists(mdist_fp) || !file.exists(ids_fp)) {
-  stop("Missing PLINK outputs. Run 17_compute_ibs.sh first.\n",
-       "Expected:\n  ", mdist_fp, "\n  ", ids_fp)
-}
-ids_df <- read.table(ids_fp, header = FALSE, stringsAsFactors = FALSE)
-ids <- ids_df[[2]]  # take IID column
-Dg  <- as.matrix(read.table(mdist_fp, header = FALSE))
-stopifnot(nrow(Dg) == length(ids), ncol(Dg) == length(ids))
+# Load data
+ids <- read.table(ids_fp, header = FALSE)[[2]]
+Dg  <- as.matrix(read.table(mdist_fp))
 rownames(Dg) <- colnames(Dg) <- ids
 
-# Read metadata & geographic distances (km)
-meta <- read.delim(meta_fp, sep = "\t", check.names = FALSE, stringsAsFactors = FALSE)
-need_cols <- c("IID","Latitude","Longitude","Group")
-if (!all(need_cols %in% names(meta))) {
-  stop("samples_clean.txt must contain columns: ", paste(need_cols, collapse=", "))
-}
+meta <- read.delim(meta_fp, sep = "\t", check.names = FALSE)
+meta <- meta %>% filter(IID %in% ids) %>% arrange(match(IID, ids))
 
-meta_ord <- meta %>% filter(IID %in% ids) %>% arrange(match(IID, ids))
-stopifnot(identical(meta_ord$IID, ids))
-
-coords <- meta_ord %>% select(Longitude, Latitude) %>% as.matrix()
+coords <- meta %>% select(Longitude, Latitude) %>% as.matrix()
 Dgeo_km <- distm(coords, fun = distHaversine) / 1000
 rownames(Dgeo_km) <- colnames(Dgeo_km) <- ids
 
-# Helpers
-eps <- 1e-6
-upper_tri <- function(M) M[upper.tri(M)]
-
-dg_gen   <- as.dist(Dg)
-dg_geo   <- as.dist(Dgeo_km)
-dg_geoLN <- as.dist(log(Dgeo_km + eps))
-
-# Mantel tests (global: raw & ln; excl. Western; within groups)
+# Mantel tests
 set.seed(123)
-mantel_raw <- mantel(dg_gen, dg_geo,   permutations = 9999, method = "pearson")
-mantel_ln  <- mantel(dg_gen, dg_geoLN, permutations = 9999, method = "pearson")
+dg_gen <- as.dist(Dg)
+dg_geo <- as.dist(Dgeo_km)
+dg_ln  <- as.dist(log(Dgeo_km + 1e-6))
 
-summ_rows <- list(
-  tibble(test = "Global (km)",         r = as.numeric(mantel_raw$statistic), p = mantel_raw$signif,
-         n_pairs = length(dg_gen)),
-  tibble(test = "Global (ln km)",      r = as.numeric(mantel_ln$statistic),  p = mantel_ln$signif,
-         n_pairs = length(dg_gen))
+mantel_all  <- mantel(dg_gen, dg_geo,   permutations = 9999)
+mantel_lnkm <- mantel(dg_gen, dg_ln,    permutations = 9999)
+
+nonW <- meta$IID[meta$Group != "Western_Europe"]
+mantel_nonW <- mantel(as.dist(Dg[nonW,nonW]), as.dist(log(Dgeo_km[nonW,nonW] + 1e-6)), permutations = 9999)
+
+summary_tbl <- tibble(
+  Test = c("Global (km)", "Global (ln km)", "Excl Western (ln km)"),
+  r = c(mantel_all$statistic, mantel_lnkm$statistic, mantel_nonW$statistic),
+  p = c(mantel_all$signif, mantel_lnkm$signif, mantel_nonW$signif)
 )
+write.table(summary_tbl, file.path(out_dir,"ibd_mantel_summary.tsv"),
+            sep="\t", row.names=FALSE, quote=FALSE)
 
-# Excluding Western_Europe
-keep_ids_nonW <- meta_ord %>% filter(Group != "Western_Europe") %>% pull(IID)
-if (length(keep_ids_nonW) >= 4) {
-  Dg_nonW   <- as.dist(Dg[keep_ids_nonW, keep_ids_nonW])
-  Dgeo_nonW <- as.dist(log(Dgeo_km[keep_ids_nonW, keep_ids_nonW] + eps))
-  set.seed(123)
-  m_nonW <- mantel(Dg_nonW, Dgeo_nonW, permutations = 9999, method = "pearson")
-  summ_rows <- append(summ_rows, list(
-    tibble(test = "Excl Western (ln km)", r = as.numeric(m_nonW$statistic),
-           p = m_nonW$signif, n_pairs = length(Dg_nonW))
-  ))
-}
-
-mantel_summary <- bind_rows(summ_rows)
-write.table(mantel_summary,
-            file = file.path(rout_dir, "ibd_mantel_summary.tsv"),
-            sep = "\t", row.names = FALSE, quote = FALSE)
-
-# Within-group Mantels
-groups <- sort(unique(meta_ord$Group))
-wg_list <- purrr::map_dfr(groups, function(g) {
-  ids_g <- meta_ord %>% filter(Group == g) %>% pull(IID)
-  if (length(ids_g) < 5) return(tibble(Group = g, n = length(ids_g), r = NA_real_, p = NA_real_))
-  Dg_g   <- as.dist(Dg[ids_g, ids_g])
-  Dgeo_g <- as.dist(log(Dgeo_km[ids_g, ids_g] + eps))
-  set.seed(123)
-  res <- mantel(Dg_g, Dgeo_g, permutations = 9999, method = "pearson")
-  tibble(Group = g, n = length(ids_g), r = as.numeric(res$statistic), p = res$signif)
+# Within-group Mantel
+wg <- unique(meta$Group)
+wg_tbl <- map_dfr(wg, function(g) {
+  ids_g <- meta$IID[meta$Group == g]
+  if (length(ids_g) < 5) return(tibble(Group=g, n=length(ids_g), r=NA, p=NA))
+  m <- mantel(as.dist(Dg[ids_g,ids_g]), as.dist(log(Dgeo_km[ids_g,ids_g] + 1e-6)), permutations=9999)
+  tibble(Group=g, n=length(ids_g), r=m$statistic, p=m$signif)
 })
-write.table(wg_list,
-            file = file.path(rout_dir, "ibd_within_group_mantel.tsv"),
-            sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(wg_tbl, file.path(out_dir,"ibd_within_group_mantel.tsv"),
+            sep="\t", row.names=FALSE, quote=FALSE)
 
-# Pairwise table for plotting
-pairs_df <- tibble::tibble(
+# Plots
+pairs_df <- tibble(
   i = rownames(Dgeo_km)[row(Dgeo_km)[upper.tri(Dgeo_km)]],
   j = colnames(Dgeo_km)[col(Dgeo_km)[upper.tri(Dgeo_km)]],
-  geo_km   = Dgeo_km[upper.tri(Dgeo_km)],
-  ln_geo   = log(Dgeo_km[upper.tri(Dgeo_km)] + eps),
-  gen_1ibs = Dg[upper.tri(Dg)]
+  geo_km = Dgeo_km[upper.tri(Dgeo_km)],
+  gen_1ibs = Dg[upper.tri(Dg)],
+  group_i = meta$Group[match(rownames(Dgeo_km)[row(Dgeo_km)[upper.tri(Dgeo_km)]], meta$IID)],
+  group_j = meta$Group[match(colnames(Dgeo_km)[col(Dgeo_km)[upper.tri(Dgeo_km)]], meta$IID)]
 ) %>%
-  mutate(
-    group_i = meta_ord$Group[match(i, meta_ord$IID)],
-    group_j = meta_ord$Group[match(j, meta_ord$IID)],
-    same_group = group_i == group_j
-  )
+  mutate(same_group = group_i == group_j)
 
-# PLOTS
-# (P1) All pairs (raw km)
-p_all <- ggplot(pairs_df, aes(x = geo_km, y = gen_1ibs)) +
-  geom_point(shape = 21, color = "black", fill = NA, size = 2, stroke = 0.7) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", fill = "grey80") +
-  labs(x = "Geographic distance (km)", y = "Genetic distance (1 – IBS)") +
+# All pairs
+p_all <- ggplot(pairs_df, aes(geo_km, gen_1ibs)) +
+  geom_point(shape=21, color="black", size=2) +
+  geom_smooth(method="lm", color="black", fill="grey80") +
+  labs(x="Geographic distance (km)", y="Genetic distance (1–IBS)") +
   theme_classic()
-ggsave(file.path(rout_dir, "ibd_all_pairs.svg"), p_all, width = 6.6, height = 5.2, dpi = 300)
+ggsave(file.path(out_dir,"ibd_all_pairs.svg"), p_all, width=6.5, height=5)
 
-# (P2) Excluding Western_Europe
-ids_nonW <- meta_ord %>% filter(Group != "Western_Europe") %>% pull(IID)
-Dg_nonW_m     <- Dg[ids_nonW, ids_nonW, drop = FALSE]
-Dgeo_nonW_m   <- Dgeo_km[ids_nonW, ids_nonW, drop = FALSE]
-pairs_nonW <- tibble::tibble(
-  i = rownames(Dgeo_nonW_m)[row(Dgeo_nonW_m)[upper.tri(Dgeo_nonW_m)]],
-  j = colnames(Dgeo_nonW_m)[col(Dgeo_nonW_m)[upper.tri(Dgeo_nonW_m)]],
-  geo_km   = Dgeo_nonW_m[upper.tri(Dgeo_nonW_m)],
-  gen_1ibs = Dg_nonW_m[upper.tri(Dg_nonW_m)]
-)
-
+# Excluding Western Europe
+pairs_nonW <- pairs_df %>% filter(!(group_i == "Western_Europe" | group_j == "Western_Europe"))
 p_nonW <- ggplot(pairs_nonW, aes(geo_km, gen_1ibs)) +
-  geom_point(shape = 21, color = "black", fill = NA, size = 2, stroke = 0.7) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", fill = "grey80") +
-  labs(x = "Geographic distance (km)", y = "Genetic distance (1 – IBS)") +
+  geom_point(shape=21, color="black", size=2) +
+  geom_smooth(method="lm", color="black", fill="grey80") +
+  labs(x="Geographic distance (km)", y="Genetic distance (1–IBS)") +
   theme_classic()
-ggsave(file.path(rout_dir, "ibd_excluding_western.svg"), p_nonW, width = 6.6, height = 5.2, dpi = 300)
+ggsave(file.path(out_dir,"ibd_excluding_western.svg"), p_nonW, width=6.5, height=5)
 
-# (P3) Within-group facets (ln km)
-p_facets <- pairs_df %>%
-  filter(same_group) %>%
-  ggplot(aes(ln_geo, gen_1ibs)) +
-  geom_point(alpha = .65, shape = 21, fill = "white", color = "black", size = 1.8) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", fill = "grey85") +
-  facet_wrap(~ group_i, scales = "free_x") +
-  labs(x = "ln(geographic distance, km)", y = "Genetic distance (1 – IBS)") +
+# Within-group facets
+p_facets <- pairs_df %>% filter(same_group) %>%
+  ggplot(aes(log(geo_km + 1e-6), gen_1ibs)) +
+  geom_point(shape=21, fill="white", color="black", size=1.8, alpha=0.7) +
+  geom_smooth(method="lm", color="black", fill="grey85") +
+  facet_wrap(~group_i, scales="free_x") +
+  labs(x="ln(geographic distance, km)", y="Genetic distance (1–IBS)") +
   theme_classic()
-ggsave(file.path(rout_dir, "ibd_within_groups_facets.svg"), p_facets, width = 9, height = 6.5, dpi = 300)
+ggsave(file.path(out_dir,"ibd_within_groups_facets.svg"), p_facets, width=8.5, height=6)
 
-message("Saved plots and tables in 04-results/")
+message("IBD analysis complete. Results written to 04-results/")
