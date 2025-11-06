@@ -15,12 +15,9 @@
 #       01-info_files/popmap_groups.txt
 #       01-info_files/popmap_groups_scania.txt
 #
-# Outputs (written to 03-analysis/08-downstream/04-diversity/):
-#   - stats_allGroups/indiv_HoHe_from_vcftools.tsv
-#   - stats_allGroups/group_heterozygosity_summary.tsv
-#   - stats_allGroups/group_heterozygosity_with_SE.tsv
-#   - stats_allGroups/FST_pairwise_summary.tsv
-#   - stats_scaniaSplit/<same files as above>
+# Outputs:
+#   - Full: 03-analysis/08-downstream/04-diversity/
+#   - Copies of key summaries: 04-results/
 #
 # Usage:
 #   ./00-scripts/12_diversity_stats.sh r70_noTrentino_noOutgroup
@@ -34,7 +31,8 @@ POPMAP_ALL="01-info_files/popmap_groups.txt"
 POPMAP_SPLIT="01-info_files/popmap_groups_scania.txt"
 
 DDIR="03-analysis/08-downstream/04-diversity"
-mkdir -p "${DDIR}"
+RDIR="04-results"
+mkdir -p "${DDIR}" "${RDIR}"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "ERROR: '$1' not found"; exit 1; }; }
 need vcftools; need awk; need grep; need sed
@@ -47,11 +45,20 @@ header_line() {
   else grep -m1 '^#CHROM' "${VCF}"; fi
 }
 
+export_case_summaries() {
+  local LABEL="$1" OUTDIR="$2"
+  # copy concise, well-named tables into 04-results
+  cp -f "${OUTDIR}/indiv_HoHe_from_vcftools.tsv"       "${RDIR}/diversity_individual_${LABEL}.tsv"
+  cp -f "${OUTDIR}/group_heterozygosity_summary.tsv"   "${RDIR}/diversity_group_summary_${LABEL}.tsv"
+  cp -f "${OUTDIR}/group_heterozygosity_with_SE.tsv"   "${RDIR}/diversity_group_SE_${LABEL}.tsv"
+  cp -f "${OUTDIR}/FST_pairwise_summary.tsv"           "${RDIR}/fst_pairwise_summary_${LABEL}.tsv"
+}
+
 run_case() {
-  local LABEL="$1"   # e.g., allGroups / scaniaSplit
+  local LABEL="$1"   # allGroups / scaniaSplit
   local POPMAP="$2"
 
-  echo "==== Case: ${LABEL} ===="
+  echo "Case: ${LABEL}"
 
   local OUTDIR="${DDIR}/stats_${LABEL}"
   local GROUPDIR="${DDIR}/groups_${LABEL}"
@@ -63,7 +70,7 @@ run_case() {
   # Samples present in this VCF
   header_line | tr '\t' '\n' | tail -n +10 > "${OUTDIR}/samples_in_vcf.txt"
 
-  # One file per group with sample IDs that are actually in the VCF
+  # Per-group sample lists for samples actually present in the VCF
   awk -v GD="${GROUPDIR}" 'BEGIN{FS=OFS="\t"}
     NR==FNR { inv[$1]=1; next }
     ($1 in inv) {
@@ -144,10 +151,14 @@ run_case() {
   | awk 'BEGIN{OFS="\t"}{print $1,$2,$3}' \
   | sort > "${OUTDIR}/FST_pairwise_summary.tsv"
 
+  # Export concise copies into 04-results
+  export_case_summaries "${LABEL}" "${OUTDIR}"
+
   echo "Done: ${LABEL}"
 }
 
 run_case "allGroups"   "${POPMAP_ALL}"
 run_case "scaniaSplit" "${POPMAP_SPLIT}"
 
-echo "All results in: ${DDIR}"
+echo "Full outputs: ${DDIR}"
+echo "Key summaries: ${RDIR}"

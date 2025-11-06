@@ -9,13 +9,14 @@
 #   outputs produced by 12_diversity_stats.sh.
 #
 # Inputs:
-#   - Per-case directories under:
+#   - Per-case dirs:
 #       03-analysis/08-downstream/04-diversity/stats_allGroups/
 #       03-analysis/08-downstream/04-diversity/stats_scaniaSplit/
 #
 # Outputs:
 #   - stats_<case>/FST_pairwise_with_CI.tsv
-#   - FST_pairwise_with_CI.tsv  (merged, deduplicated)
+#   - FST_pairwise_with_CI.tsv (merged, deduplicated)
+#   - Copies of case tables into 04-results/
 #
 # Usage:
 #   B=1000 ./00-scripts/12_fst_bootstrap.sh
@@ -25,6 +26,9 @@ set -euo pipefail
 
 B=${B:-1000}
 BASE="03-analysis/08-downstream/04-diversity"
+RDIR="04-results"
+mkdir -p "${RDIR}"
+
 CASE_DIRS=("${BASE}/stats_allGroups" "${BASE}/stats_scaniaSplit")
 
 mean_from_log () { awk -F': ' '/Weir and Cockerham mean Fst estimate:/ {print $2}' "$1" | tail -n1; }
@@ -90,6 +94,10 @@ for DIR in "${CASE_DIRS[@]}"; do
 
   echo "Wrote ${OUT}"
   CASE_OUTS+=("${OUT}")
+
+  # export a copy to 04-results with the case label in the name
+  case_label=$(basename "${DIR}" | sed 's/^stats_//')
+  cp -f "${OUT}" "${RDIR}/fst_pairwise_with_CI_${case_label}.tsv"
 done
 
 # merge
@@ -102,6 +110,7 @@ if [ "${#CASE_OUTS[@]}" -gt 0 ]; then
     { key=$1 OFS $2; if(!(key in seen)){seen[key]=1; print} }
   ' "${CASE_OUTS[@]}" > "${MERGED}"
   echo "Wrote ${MERGED}"
+  cp -f "${MERGED}" "${RDIR}/fst_pairwise_with_CI.tsv"
 else
   echo "No per-case outputs produced; merged table not created."
 fi
