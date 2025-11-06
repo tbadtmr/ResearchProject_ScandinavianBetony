@@ -1,0 +1,5 @@
+Test	Type	Transformation	r	p
+Global	Mantel	all samples (ln distance)	0.490	<0.0001
+Global	Mantel	excluding Western_Europe (ln distance)	0.501	<0.0001
+Partial	Mantel	distance | group	0.174	0.0002
+Partial	Mantel	group | distance	0.273	0.0001

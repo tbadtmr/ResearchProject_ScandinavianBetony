@@ -1,0 +1,5 @@
+r Value	Loci	Variant Sites	Mean depth	Mean Site missingness	Individuals with depth <20	Individuals with >50% missingness
+0.5	2805	15984	74.82	0.2427	Trentino (11.95)	Trentino (92.8%); Illuka (53.9%)
+0.6	2376	13230	75.96	0.1985	Trentino (11.89)	Trentino (92.2%); Illuka (51.1%)
+0.7	1900	10025	76.85	0.1498	Trentino (11.71)	Trentino (92.0%)
+0.8	1464	7061	77.11	0.1108	Trentino (11.68)	Trentino (91.9%)

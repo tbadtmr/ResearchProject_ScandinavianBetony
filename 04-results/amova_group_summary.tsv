@@ -1,0 +1,4 @@
+Source	d.f.	Sum_of_squares	Variance_component_sigma2	Percent_variation
+Among_regions	4	0.788	0.022	56.2
+Within_regions	36	0.623	0.017	43.8
+Total	40	1.411	NA	NA

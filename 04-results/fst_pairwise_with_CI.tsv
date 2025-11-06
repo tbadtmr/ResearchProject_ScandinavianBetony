@@ -1,0 +1,20 @@
+pop1	pop2	FST	CI95
+Balkan	Baltic	0.009	0.005–0.014
+Balkan	Central	0.020	0.017–0.023
+Balkan	Introduced	0.020	0.013–0.027
+Balkan	Scania	0.072	0.067–0.078
+Balkan	Sweden	0.045	0.041–0.048
+Balkan	Western	0.178	0.169–0.188
+Baltic	Central	0.017	0.013–0.022
+Baltic	Introduced	0.002	-0.006–0.011 ≈0
+Baltic	Scania	0.105	0.097–0.112
+Baltic	Sweden	0.050	0.044–0.055
+Baltic	Western	0.202	0.191–0.212
+Central	Introduced	0.001	-0.006–0.008 ≈0
+Central	Scania	0.055	0.050–0.059
+Central	Sweden	0.032	0.029–0.036
+Central	Western	0.164	0.155–0.173
+Introduced	Scania	0.113	0.104–0.123
+Introduced	Western	0.162	0.151–0.173
+Scania	Western	0.255	0.244–0.266
+Sweden	Western	0.196	0.186–0.206

@@ -1,0 +1,12 @@
+GroupingScheme	Group	n	r	p
+Group	Balkan-Carpathian	9	0.644	0.0001
+Group	Baltic	6	0.640	0.0040
+Group	Central_Europe	9	0.234	0.1520
+Group	Scandinavia	11	0.827	0.0001
+Group	Western_Europe	6	-0.355	0.8110
+Group2	Balkan-Carpathian	9	0.644	0.0001
+Group2	Baltic	6	0.640	0.0040
+Group2	Central_Europe	9	0.234	0.1520
+Group2	Introduced	3	NA	NA
+Group2	Scania	8	0.891	0.0007
+Group2	Western_Europe	6	-0.355	0.8110
