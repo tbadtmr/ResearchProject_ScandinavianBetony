@@ -268,7 +268,7 @@ Based on the quality summaries and visual inspections generated, the final SNP d
 
 Filtered VCFs are saved in `03-analysis/07-finalvcfs/`.
 
-HOT TO RUN
+HOW TO RUN
 ```sh
 # make output directory
 cd ScandinavianBetony
